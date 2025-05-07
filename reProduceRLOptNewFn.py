@@ -38,35 +38,36 @@ import time
 
 
 #To limit TensorFlow to a CPU
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-cpus = tf.config.experimental.list_physical_devices('CPU') 
-tf.config.experimental.set_visible_devices(cpus[0], 'CPU')
+os.environ['CUDA_VISIBLE_DEVICES'] = '0' #This tells TensorFlow NOT to use the GPU — only CPU should be used.
+cpus = tf.config.experimental.list_physical_devices('CPU') #lists all available CPU devices.
+tf.config.experimental.set_visible_devices(cpus[0], 'CPU')#restricts TensorFlow to use only the first CPU (or a specific CPU).
 #enable multiprocessing for parallel computing
-tf_agents.system.multiprocessing.enable_interactive_mode()
-gc.collect()
+tf_agents.system.multiprocessing.enable_interactive_mode() #stands for garbage collection.
+gc.collect() #forces Python to free up unused memory immediately.
 
 ###############
 #Define the objective f to be maximized
 N = 1   #This the dimension number
 state_dim = N
-def f(x,lambda_coef=0.3):
-    return -(x**2 -1)**2 - lambda_coef*(x-1)**2 + 5
+def f(x,lambda_coef=1):
+    return -np.sin(3*x) -lambda_coef * (x**2)#-(x**2 -1)**2 - lambda_coef*(x-1)**2 + 5
 
 ################
 #Set initial x-values for all three algorithms
-x0_reinforce = np.array([-1.5],dtype=np.float32)
-sub_episode_length = 35 #number of time_steps in a sub-episode. 
+x0_reinforce = np.array([0.5],dtype=np.float32)# Set the initial value of x for the REINFORCE algorithm to -1.5 and It's stored as a NumPy array of type float32 (standard for TensorFlow operations).
+sub_episode_length = 25 #number of time_steps in a sub-episode. Each sub-episode (or smaller segment of a trajectory) will last 25 time steps.RL split long tasks into small tasks.
 episode_length = sub_episode_length*6  #an trajectory starts from the initial timestep and has no other initial timesteps
                                       #each trajectory will be split to multiple episodes
+                                      #One full trajectory (or episode) will have 25×6=150 time steps.planning to generate longer trajectories (150 steps)
 env_num = 10 #Number of parallel environments, each environment is used to generate an episode
 print('x0', x0_reinforce)
 
 ################
 #Set hyper-parameters for REINFORCE-OPT
-generation_num = 3500  #number of theta updates for REINFORCE-IP, also serves as the number
-                      #of generations for GA, and the number of iterations for particle swarm optimization
+generation_num = 400  #number of theta (model's parameters) updates for REINFORCE-IP, also serves as the number
+                      #of generations for GA(genetic algorithm) and the number of iterations for particle swarm optimization
 
-disc_factor = 1.0
+disc_factor = 1.0 # discount factor for future rewards, typically denoted as γ (gamma) in RL. 1.0 means that future rewards are considered equally as important as immediate rewards.
 alpha = 0.2 #regularization coefficient
 param_alpha = 0.15 #regularization coefficient for actor_network #tested value: 0.02
 sub_episode_num = int(env_num*(episode_length/sub_episode_length)) #number of sub-episodes used for a single update of actor_net params
@@ -94,7 +95,7 @@ def compute_reward(x):
     
 #Define the Environment
 class Env(py_environment.PyEnvironment):
-    def __init__(self): 
+    def __init__(self):
         '''The function to initialize an Env obj.
         '''
         #Specify the requirement for the value of action, (It is a 2d-array for this case)
@@ -419,8 +420,7 @@ if __name__ == "__main__":
 
     #Get the GD trajectory
     def forward_fn(x_val):
-        return -(x_val**2-1)**2 - 0.3*(x_val-1)**2+5
-
+        return -np.sin(3*x_val) -(x_val**2)
     def f_grad(x_val):
         return -4*(x_val**2-1)*x_val - 0.6*(x_val-1)
 
@@ -485,7 +485,7 @@ if __name__ == "__main__":
                 dy=REINFORCE_trajectory[i+1][1]-REINFORCE_trajectory[i][1],
                 color='r',width=0.02)
 
-    plt.plot(x_arr,f_vals,linestyle='--',label='$\mathcal{L}(x)=-(x^2-1)^2-0.3(x-1)^2+5$')
+    plt.plot(x_arr,f_vals,linestyle='--',label='$\mathcal{L}(x)=-sin(3*x) -lambda_coef * (x**2)$')
     plt.tick_params(labelsize=20)
     plt.xlabel('$x$',size=25)
     plt.ylabel('$\mathcal{L}(x)$',size=25)
@@ -510,7 +510,7 @@ if __name__ == "__main__":
                 dy=grad_trajectory[i+1][1]-grad_trajectory[i][1],
                 color='b',linestyle='--',width=0.015)
 
-    plt.plot(x_arr,f_vals,linestyle='--',label='$\mathcal{L}(x)=-(x^2-1)^2-0.3(x-1)^2+5$')
+    plt.plot(x_arr,f_vals,linestyle='--',label='$\mathcal{L}(x)=-sin(3*x) -lambda_coef * (x**2)$')
     plt.tick_params(labelsize=20)
     plt.xlabel('$x$',size=25)
     plt.ylabel('$\mathcal{L}(x)$',size=25)
