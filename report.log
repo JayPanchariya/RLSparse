@@ -166,3 +166,10 @@ Use `as_dataset(..., single_deterministic_pass=True)` instead.
 2025-04-29 13:13:12,127 - tensorflow - WARNING - From /Users/jayotsana/Documents/m1Project/RLSparse/reProduceRLOptNewFn.py:334: ReplayBuffer.gather_all (from tf_agents.replay_buffers.replay_buffer) is deprecated and will be removed in a future version.
 Instructions for updating:
 Use `as_dataset(..., single_deterministic_pass=True)` instead.
+2025-05-07 20:46:05,422 - absl - INFO - Spawning all processes.
+2025-05-07 20:46:06,056 - absl - INFO - Waiting for all processes to start.
+2025-05-07 20:46:49,449 - absl - INFO - All processes started.
+2025-05-07 20:46:54,399 - tensorflow - WARNING - From /Users/jayotsana/Documents/m1Project/RLSparse/reProduceRLOpt.py:333: ReplayBuffer.gather_all (from tf_agents.replay_buffers.replay_buffer) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use `as_dataset(..., single_deterministic_pass=True)` instead.
+2025-05-07 20:49:44,152 - matplotlib.backends.backend_ps - WARNING - The PostScript backend does not support transparency; partially transparent artists will be rendered opaque.
