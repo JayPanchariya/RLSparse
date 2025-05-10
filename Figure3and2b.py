@@ -117,7 +117,9 @@ class lr_schedule(tf.keras.optimizers.schedules.LearningRateSchedule):
         self.initial_learning_rate = initial_lr
         self.C = C
     def __call__(self, step):
-        return self.initial_learning_rate*self.C/(self.C+step)
+        step = tf.cast(step, tf.float32)
+        return self.initial_learning_rate * self.C / (self.C + step)
+    
 lr = lr_schedule(initial_lr=0.00002, C=50000)   
 opt = tf.keras.optimizers.SGD(learning_rate=lr)
 #opt = tf.keras.optimizers.Adam( )
@@ -354,227 +356,229 @@ def extract_episode(traj_batch,epi_length,attr_name = 'observation'):
 # Please also see the metrics module for standard implementations of different
 # metrics.
 
-######## Train REINFORCE_agent's actor_network multiple times.
-update_num = generation_num 
-eval_intv = 100 #number of updates required before each policy evaluation
-REINFORCE_logs = [] #for logging the best objective value of the best solution among all the solutions used for one update of theta
-final_reward = -1000
-plot_intv = 500
+if __name__ == '__name__':
+    ######## Train REINFORCE_agent's actor_network multiple times.
+    update_num = generation_num 
+    eval_intv = 2 #number of updates required before each policy evaluation
+    REINFORCE_logs = [] #for logging the best objective value of the best solution among all the solutions used for one update of theta
+    final_reward = -1000
+    plot_intv = 500
 
-tf.random.set_seed(0)
-for n in range(0,update_num):
-    #Generate Trajectories
-    replay_buffer.clear()
-    collect_driver.run()  #a batch of trajectories will be saved in replay_buffer
-    
-    experience = replay_buffer.gather_all() #get the batch of trajectories, shape=(batch_size, episode_length)
-    rewards = extract_episode(traj_batch=experience,epi_length=sub_episode_length,attr_name = 'reward') #shape=(sub_episode_num, sub_episode_length)
-    observations = extract_episode(traj_batch=experience,epi_length=sub_episode_length,attr_name = 'observation') #shape=(sub_episode_num, sub_episode_length, state_dim)
-    actions = extract_episode(traj_batch=experience,epi_length=sub_episode_length,attr_name = 'action') #shape=(sub_episode_num, sub_episode_length, state_dim)
-    step_types = extract_episode(traj_batch=experience,epi_length=sub_episode_length,attr_name = 'step_type')
-    discounts = extract_episode(traj_batch=experience,epi_length=sub_episode_length,attr_name = 'discount')
-    
-    time_steps = ts.TimeStep(step_types,
-                             tf.zeros_like(rewards),
-                             tf.zeros_like(discounts),
-                             observations
-                            )
-    
-    rewards_sum = tf.reduce_sum(rewards, axis=1) #shape=(sub_episode_num,)
-    
-    with tf.GradientTape() as tape:
-        #trainable parameters in the actor_network in REINFORCE_agent
-        variables_to_train = REINFORCE_agent._actor_network.trainable_weights
-    
-        ###########Compute J_loss = -J
-        actions_distribution = REINFORCE_agent.collect_policy.distribution(
-                               time_steps, policy_state=None).action
-    
-        #log(pi(action|state)), shape = (batch_size, epsode_length)
-        action_log_prob = common.log_probability(actions_distribution, 
-                                                 actions,
-                                                 REINFORCE_agent.action_spec)
-    
-        J = tf.reduce_sum(tf.reduce_sum(action_log_prob,axis=1)*rewards_sum)/sub_episode_num
+    tf.random.set_seed(0)
+    for n in range(0,update_num):
+        print(n)
+        #Generate Trajectories
+        replay_buffer.clear()
+        collect_driver.run()  #a batch of trajectories will be saved in replay_buffer
         
-        ###########Compute regularization loss from actor_net params
-        regu_term = tf.reduce_sum(variables_to_train[0]**2)
-        num = len(variables_to_train) #number of vectors in variables_to_train
-        for i in range(1,num):
-            regu_term += tf.reduce_sum(variables_to_train[i]**2)
+        experience = replay_buffer.gather_all() #get the batch of trajectories, shape=(batch_size, episode_length)
+        rewards = extract_episode(traj_batch=experience,epi_length=sub_episode_length,attr_name = 'reward') #shape=(sub_episode_num, sub_episode_length)
+        observations = extract_episode(traj_batch=experience,epi_length=sub_episode_length,attr_name = 'observation') #shape=(sub_episode_num, sub_episode_length, state_dim)
+        actions = extract_episode(traj_batch=experience,epi_length=sub_episode_length,attr_name = 'action') #shape=(sub_episode_num, sub_episode_length, state_dim)
+        step_types = extract_episode(traj_batch=experience,epi_length=sub_episode_length,attr_name = 'step_type')
+        discounts = extract_episode(traj_batch=experience,epi_length=sub_episode_length,attr_name = 'discount')
         
-        total = -J + param_alpha*regu_term
-    
-    #update parameters in the actor_network in the policy
-    grads = tape.gradient(total, variables_to_train)
-    grads_and_vars = list(zip(grads, variables_to_train))
-    opt.apply_gradients(grads_and_vars=grads_and_vars)
-    train_step_num += 1
-    
-    batch_rewards = rewards.numpy()
-    batch_rewards[:,-1] = -np.power(10,8) #The initial reward is set as 0, we set it as this value to not affect the best_obs_index 
-    best_step_reward = np.max(batch_rewards)
-    best_step_index = [int(batch_rewards.argmax()/sub_episode_length),batch_rewards.argmax()%sub_episode_length+1]
-    best_step = observations[best_step_index[0],best_step_index[1],:] #best solution
-    #best_step_reward = f(best_solution)
-    avg_step_reward = np.mean(batch_rewards[:,0:-1])
-    REINFORCE_logs.append(best_step_reward)
-    
-    if best_step_reward>final_reward:
-        #print("final reward before udpate:",final_reward)
-        final_reward = best_step_reward
-        final_solution = best_step.numpy()
-        #print("final reward after udpate:",final_reward)
-        #print('updated final_solution=', final_solution)
-    
-    #print(compute_reward(best_obs,alpha))
-    if n%eval_intv==0:
-        print("train_step no.=",train_step_num)
-        print('best_solution of this generation=', best_step.numpy())
-        print('best step reward=',best_step_reward.round(3),f(best_step.numpy()))
-        print('avg step reward=', round(avg_step_reward,3))
-        #print('episode of rewards', rewards.round(3))
-        #print('act_std:', actions_distribution.stddev()[0,0]  )
-        #print('act_mean:', actions_distribution.mean()[0,0] ) #second action mean
-        print('best_step_index:',best_step_index)
-        print(observations[0])
-        print(' ')
+        time_steps = ts.TimeStep(step_types,
+                                tf.zeros_like(rewards),
+                                tf.zeros_like(discounts),
+                                observations
+                                )
         
-    if n%plot_intv==0:
-        test_buffer.clear()
-        test_driver.run(eval_env.reset())  #generate batches of trajectories with agent.collect_policy, and save them in replay_buffer
-        experience = test_buffer.gather_all()  #get all the stored items in replay_buffer
-        rl_trajectory = experience.observation.numpy()[0]
+        rewards_sum = tf.reduce_sum(rewards, axis=1) #shape=(sub_episode_num,)
         
-        #Plot
-        fig, ax = plt.subplots(figsize=(12,12))
-        CS = ax.contour(X1, X2, Y)
+        with tf.GradientTape() as tape:
+            #trainable parameters in the actor_network in REINFORCE_agent
+            variables_to_train = REINFORCE_agent._actor_network.trainable_weights
         
-        i = 0
-        plt.arrow(x=rl_trajectory[i][0],
-          y=rl_trajectory[i][1],
-          dx=rl_trajectory[i+1][0]-rl_trajectory[i][0],
-          dy=rl_trajectory[i+1][1]-rl_trajectory[i][1],
-          color='r',linestyle='--',width=0.01, label='REINFORCE-OPT')
-
-        for i in range(0, len(rl_trajectory)-1):   
+            ###########Compute J_loss = -J
+            actions_distribution = REINFORCE_agent.collect_policy.distribution(
+                                time_steps, policy_state=None).action
+        
+            #log(pi(action|state)), shape = (batch_size, epsode_length)
+            action_log_prob = common.log_probability(actions_distribution, 
+                                                    actions,
+                                                    REINFORCE_agent.action_spec)
+        
+            J = tf.reduce_sum(tf.reduce_sum(action_log_prob,axis=1)*rewards_sum)/sub_episode_num
+            
+            ###########Compute regularization loss from actor_net params
+            regu_term = tf.reduce_sum(variables_to_train[0]**2)
+            num = len(variables_to_train) #number of vectors in variables_to_train
+            for i in range(1,num):
+                regu_term += tf.reduce_sum(variables_to_train[i]**2)
+            
+            total = -J + param_alpha*regu_term
+        
+        #update parameters in the actor_network in the policy
+        grads = tape.gradient(total, variables_to_train)
+        grads_and_vars = list(zip(grads, variables_to_train))
+        opt.apply_gradients(grads_and_vars=grads_and_vars)
+        train_step_num += 1
+        
+        batch_rewards = rewards.numpy()
+        batch_rewards[:,-1] = -np.power(10,8) #The initial reward is set as 0, we set it as this value to not affect the best_obs_index 
+        best_step_reward = np.max(batch_rewards)
+        best_step_index = [int(batch_rewards.argmax()/sub_episode_length),batch_rewards.argmax()%sub_episode_length+1]
+        best_step = observations[best_step_index[0],best_step_index[1],:] #best solution
+        #best_step_reward = f(best_solution)
+        avg_step_reward = np.mean(batch_rewards[:,0:-1])
+        REINFORCE_logs.append(best_step_reward)
+        
+        if best_step_reward>final_reward:
+            #print("final reward before udpate:",final_reward)
+            final_reward = best_step_reward
+            final_solution = best_step.numpy()
+            #print("final reward after udpate:",final_reward)
+            #print('updated final_solution=', final_solution)
+        
+        #print(compute_reward(best_obs,alpha))
+        if n%eval_intv==0:
+            print("train_step no.=",train_step_num)
+            print('best_solution of this generation=', best_step.numpy())
+            print('best step reward=',best_step_reward.round(3),f(best_step.numpy()))
+            print('avg step reward=', round(avg_step_reward,3))
+            #print('episode of rewards', rewards.round(3))
+            #print('act_std:', actions_distribution.stddev()[0,0]  )
+            #print('act_mean:', actions_distribution.mean()[0,0] ) #second action mean
+            print('best_step_index:',best_step_index)
+            print(observations[0])
+            print(' ')
+            
+        if n%plot_intv==0:
+            test_buffer.clear()
+            test_driver.run(eval_env.reset())  #generate batches of trajectories with agent.collect_policy, and save them in replay_buffer
+            experience = test_buffer.gather_all()  #get all the stored items in replay_buffer
+            rl_trajectory = experience.observation.numpy()[0]
+            
+            #Plot
+            fig, ax = plt.subplots(figsize=(12,12))
+            CS = ax.contour(X1, X2, Y)
+            
+            i = 0
             plt.arrow(x=rl_trajectory[i][0],
-              y=rl_trajectory[i][1],
-              dx=rl_trajectory[i+1][0]-rl_trajectory[i][0],
-              dy=rl_trajectory[i+1][1]-rl_trajectory[i][1],
-              color='r',linestyle='--',width=0.01)
-        
-        #plt.plot(x_arr,f_vals,linestyle='--',label='$f(x)=(x^2-1)^2+0.3(x-1)^2$')
-        plt.tick_params(size=16)
-        plt.xlabel('x',size=20)
-        plt.ylabel('f(x)',size=20)
-        plt.legend(loc='upper right',fontsize=20)   
-        plt.show()
-        
-print('final_solution=',final_solution,
-      'final_reward=',final_reward,
-      )
-REINFORCE_logs = [max(REINFORCE_logs[0:i]) for i in range(1,generation_num+1)] #rolling max
+            y=rl_trajectory[i][1],
+            dx=rl_trajectory[i+1][0]-rl_trajectory[i][0],
+            dy=rl_trajectory[i+1][1]-rl_trajectory[i][1],
+            color='r',linestyle='--',width=0.01, label='REINFORCE-OPT')
+
+            for i in range(0, len(rl_trajectory)-1):   
+                plt.arrow(x=rl_trajectory[i][0],
+                y=rl_trajectory[i][1],
+                dx=rl_trajectory[i+1][0]-rl_trajectory[i][0],
+                dy=rl_trajectory[i+1][1]-rl_trajectory[i][1],
+                color='r',linestyle='--',width=0.01)
+            
+            #plt.plot(x_arr,f_vals,linestyle='--',label='$f(x)=(x^2-1)^2+0.3(x-1)^2$')
+            plt.tick_params(size=16)
+            plt.xlabel('x',size=20)
+            plt.ylabel('f(x)',size=20)
+            plt.legend(loc='upper right',fontsize=20)   
+            plt.show()
+            
+    print('final_solution=',final_solution,
+        'final_reward=',final_reward,
+        )
+    REINFORCE_logs = [max(REINFORCE_logs[0:i]) for i in range(1,generation_num+1)] #rolling max
 
 
-############################################# - Second Part of Figure 3
-############# - Create a trajectory with REINFORCE_agent.policy (which select action according to the mode of action distribution)
-test_buffer.clear()
-test_driver.run(eval_env.reset())  #generate batches of trajectories with agent.collect_policy, and save them in replay_buffer
-experience = test_buffer.gather_all()  #get all the stored items in replay_buffer
-rl_trajectory = experience.observation.numpy()[0]
+    ############################################# - Second Part of Figure 3
+    ############# - Create a trajectory with REINFORCE_agent.policy (which select action according to the mode of action distribution)
+    test_buffer.clear()
+    test_driver.run(eval_env.reset())  #generate batches of trajectories with agent.collect_policy, and save them in replay_buffer
+    experience = test_buffer.gather_all()  #get all the stored items in replay_buffer
+    rl_trajectory = experience.observation.numpy()[0]
 
-############# - Create the Gradient Ascent Trajectory
-ga_trajectory = [x0_reinforce]
-step_num = 30
-current_x = tf.Variable([0.5,-1])
+    ############# - Create the Gradient Ascent Trajectory
+    ga_trajectory = [x0_reinforce]
+    step_num = 30
+    current_x = tf.Variable([0.5,-1])
 
-for i in range(step_num):
-    with tf.GradientTape() as tape:
-        y = -(2-tf.reduce_sum(tf.math.cos(10*current_x)) + 0.05*tf.reduce_sum(100*current_x**2))+10
-    gradient = tape.gradient(y, current_x)
-    norm_gradient = gradient.numpy()/np.sqrt(np.sum(gradient.numpy()**2))
-    current_x.assign(current_x.numpy() + norm_gradient*step_size)
-    ga_trajectory.append(current_x.numpy())
+    for i in range(step_num):
+        with tf.GradientTape() as tape:
+            y = -(2-tf.reduce_sum(tf.math.cos(10*current_x)) + 0.05*tf.reduce_sum(100*current_x**2))+10
+        gradient = tape.gradient(y, current_x)
+        norm_gradient = gradient.numpy()/np.sqrt(np.sum(gradient.numpy()**2))
+        current_x.assign(current_x.numpy() + norm_gradient*step_size)
+        ga_trajectory.append(current_x.numpy())
 
-############# - Plot Trajectories
-fig, ax = plt.subplots(figsize=(8,8))
-plt.rcParams['text.usetex'] = True
-plt.rcParams['mathtext.fontset'] = 'custom'
-plt.rcParams['mathtext.bf'] = 'STIXGeneral:italic:bold'
-plt.rcParams['mathtext.it'] = 'STIXGeneral:italic'
+    ############# - Plot Trajectories
+    fig, ax = plt.subplots(figsize=(8,8))
+    plt.rcParams['text.usetex'] = True
+    plt.rcParams['mathtext.fontset'] = 'custom'
+    plt.rcParams['mathtext.bf'] = 'STIXGeneral:italic:bold'
+    plt.rcParams['mathtext.it'] = 'STIXGeneral:italic'
 
-#Contour Plot for the objective function
-CS = ax.contour(X1, X2, Y)
-ax.clabel(CS, inline=True, fontsize=20,fmt='%1.1f',
-         colors=('r', 'red', 'blue', (1, 1, 0), '#afeeee', '0.5')
-         )
+    #Contour Plot for the objective function
+    CS = ax.contour(X1, X2, Y)
+    ax.clabel(CS, inline=True, fontsize=20,fmt='%1.1f',
+            colors=('r', 'red', 'blue', (1, 1, 0), '#afeeee', '0.5')
+            )
 
-#Plot the REINFORCE-OPT trajectory
-i = 0
-plt.arrow(x=rl_trajectory[i][0],
-          y=rl_trajectory[i][1],
-          dx=rl_trajectory[i+1][0]-rl_trajectory[i][0],
-          dy=rl_trajectory[i+1][1]-rl_trajectory[i][1],
-          color='r',linestyle='--',width=0.008, label='REINFORCE-OPT')
-
-for i in range(0, len(rl_trajectory)-1):   
+    #Plot the REINFORCE-OPT trajectory
+    i = 0
     plt.arrow(x=rl_trajectory[i][0],
-              y=rl_trajectory[i][1],
-              dx=rl_trajectory[i+1][0]-rl_trajectory[i][0],
-              dy=rl_trajectory[i+1][1]-rl_trajectory[i][1],
-              color='r',linestyle='--',width=0.008)
+            y=rl_trajectory[i][1],
+            dx=rl_trajectory[i+1][0]-rl_trajectory[i][0],
+            dy=rl_trajectory[i+1][1]-rl_trajectory[i][1],
+            color='r',linestyle='--',width=0.008, label='REINFORCE-OPT')
 
-#Plot the gradient descent trajectory
-i = 0
-plt.arrow(x=ga_trajectory[i][0],
-          y=ga_trajectory[i][1],
-          dx=ga_trajectory[i+1][0]-ga_trajectory[i][0],
-          dy=ga_trajectory[i+1][1]-ga_trajectory[i][1],
-          color='b',linestyle='--',width=0.006, label='Gradient Ascent')
+    for i in range(0, len(rl_trajectory)-1):   
+        plt.arrow(x=rl_trajectory[i][0],
+                y=rl_trajectory[i][1],
+                dx=rl_trajectory[i+1][0]-rl_trajectory[i][0],
+                dy=rl_trajectory[i+1][1]-rl_trajectory[i][1],
+                color='r',linestyle='--',width=0.008)
 
-for i in range(0, len(ga_trajectory)-1):   
+    #Plot the gradient descent trajectory
+    i = 0
     plt.arrow(x=ga_trajectory[i][0],
-              y=ga_trajectory[i][1],
-              dx=ga_trajectory[i+1][0]-ga_trajectory[i][0],
-              dy=ga_trajectory[i+1][1]-ga_trajectory[i][1],
-              color='b',linestyle='--',width=0.006)
+            y=ga_trajectory[i][1],
+            dx=ga_trajectory[i+1][0]-ga_trajectory[i][0],
+            dy=ga_trajectory[i+1][1]-ga_trajectory[i][1],
+            color='b',linestyle='--',width=0.006, label='Gradient Ascent')
 
-plt.plot(0,0,marker='o',color='black',markersize=12) 
-plt.text(0.001, 0.05, s='Global Max',size=20)
-plt.tick_params(size=8)
-plt.xlabel('$x_1$',size=25)
-plt.ylabel('$x_2$',size=25)
-plt.legend(loc='upper right',fontsize=20)   
-#plt.title(r"Trajectory in the $\mathbf{x}$-space",size=15)
-plt.savefig("escape-2D-traj1.eps", bbox_inches='tight', transparent=True)
-plt.show()
+    for i in range(0, len(ga_trajectory)-1):   
+        plt.arrow(x=ga_trajectory[i][0],
+                y=ga_trajectory[i][1],
+                dx=ga_trajectory[i+1][0]-ga_trajectory[i][0],
+                dy=ga_trajectory[i+1][1]-ga_trajectory[i][1],
+                color='b',linestyle='--',width=0.006)
+
+    plt.plot(0,0,marker='o',color='black',markersize=12) 
+    plt.text(0.001, 0.05, s='Global Max',size=20)
+    plt.tick_params(size=8)
+    plt.xlabel('$x_1$',size=25)
+    plt.ylabel('$x_2$',size=25)
+    plt.legend(loc='upper right',fontsize=20)   
+    #plt.title(r"Trajectory in the $\mathbf{x}$-space",size=15)
+    plt.savefig("escape-2D-traj1.eps", bbox_inches='tight', transparent=True)
+    plt.show()
 
 
 
-########################################################### - Figure 2b
-rl_fitness_traj = []
-ga_fitness_traj = []
-for i in range(step_num):
-    rl_fitness_traj.append(f(rl_trajectory[i]))
-    
-for i in range(step_num):
-    ga_fitness_traj.append(f(ga_trajectory[i]))
-    
-plt.figure(figsize=(8,6))
-plt.rcParams['text.usetex'] = True
-plt.rcParams['mathtext.fontset'] = 'custom'
-plt.rcParams['mathtext.bf'] = 'STIXGeneral:italic:bold'
-plt.rcParams['mathtext.it'] = 'STIXGeneral:italic'
+    ########################################################### - Figure 2b
+    rl_fitness_traj = []
+    ga_fitness_traj = []
+    for i in range(step_num):
+        rl_fitness_traj.append(f(rl_trajectory[i]))
+        
+    for i in range(step_num):
+        ga_fitness_traj.append(f(ga_trajectory[i]))
+        
+    plt.figure(figsize=(8,6))
+    plt.rcParams['text.usetex'] = True
+    plt.rcParams['mathtext.fontset'] = 'custom'
+    plt.rcParams['mathtext.bf'] = 'STIXGeneral:italic:bold'
+    plt.rcParams['mathtext.it'] = 'STIXGeneral:italic'
 
-plt.plot(range(1,step_num+1),rl_fitness_traj,color='red',marker='o',linestyle='--',label='REINFORCE-OPT')
-plt.plot(range(1,step_num+1),ga_fitness_traj,color='blue',marker='x',linestyle='--',label='Gradient Ascent')
-plt.xlabel('$t$',size=28)
-plt.gca().set_xscale('log')
-plt.xlim([0,40]) 
-plt.ylabel('$\mathcal{L}(x_t)$',size=28)
-plt.tick_params(labelsize=20)
-plt.legend(loc='upper left',fontsize=20)
-#plt.title('$\mathcal{L}(x_t)$ Trajectory - The 2D Case',size=25)
-plt.savefig("fitness-traj-2D.eps")
-plt.show()
+    plt.plot(range(1,step_num+1),rl_fitness_traj,color='red',marker='o',linestyle='--',label='REINFORCE-OPT')
+    plt.plot(range(1,step_num+1),ga_fitness_traj,color='blue',marker='x',linestyle='--',label='Gradient Ascent')
+    plt.xlabel('$t$',size=28)
+    plt.gca().set_xscale('log')
+    plt.xlim([0,40]) 
+    plt.ylabel('$\mathcal{L}(x_t)$',size=28)
+    plt.tick_params(labelsize=20)
+    plt.legend(loc='upper left',fontsize=20)
+    #plt.title('$\mathcal{L}(x_t)$ Trajectory - The 2D Case',size=25)
+    plt.savefig("fitness-traj-2D.eps")
+    plt.show()

@@ -1,5 +1,6 @@
 rlEnv
 
-pip install tensorflow==2.13.0
-pip install tensorflow-probability==0.20.0
-pip install keras==2.13.1
+
+*.pyc
+/*.pyc
+__pycache__/environmentRL.cpython-310.pyc

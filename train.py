@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import axes3d
@@ -33,6 +37,7 @@ from tf_agents.drivers.dynamic_episode_driver import DynamicEpisodeDriver
 # my function
 import environmentRL as envRL
 import function2D as fun
+import utills as utills
 
 #To limit TensorFlow to CPU
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -87,14 +92,24 @@ def extract_episode(traj_batch,epi_length,state_dim=2 ,attr_name = 'observation'
 
     
 class RLOpt():
-    def __init__(self):
+    def __init__(self, dirName='rosebourk'):
+        ### create a folder for  results and take an 
+        self.path = os.path.join("results", dirName)
+        
+        try:
+            os.makedirs(self.path, exist_ok=True)
+            os.makedirs(self.path+'/trajInt/', exist_ok=True)
+            print("Directory '%s' created successfully" % dirName)
+        except OSError as error:
+            print("Directory '%s' can not be created")
+            
         N=2
         self.state_dim =N
         #Actor train program
         self.REINFORCE_logs = [] #for logging the best objective value of the best solution among all the solutions used for one update of theta 
-        self.eval_intv = 2 #number of updates required before each policy evaluation
+        self.eval_intv = 100 #number of updates required before each policy evaluation
         self.final_reward = -1000
-        self.plot_intv = 500 # plot at interval 
+        self.plot_intv = 100 # plot at interval 
         self.train_step_num = 0
         #Set initial x-value
         r = np.random.RandomState(0)
@@ -108,10 +123,10 @@ class RLOpt():
         self.act_min = -1
         self.act_max = 1
         self.step_size = 0.05
-        self.step_numGe = 30 # gredient step size
+        self.step_numGe = 100 # gredient step size
 
         #Set hyper-parameters for REINFORCE-OPT
-        self.generation_num = 10 #number of theta updates for REINFORCE-IP, also serves as the number
+        self.generation_num = 3000#number of theta updates for REINFORCE-IP, also serves as the number
                             #of generations for GA, and the number of iterations for particle swarm optimization
 
         self.disc_factor = 1.0
@@ -173,6 +188,22 @@ class RLOpt():
 
         self.REINFORCE_agent.initialize()
         
+         # Checkpoint setup
+        self.checkpoint_dir = 'checkpoints/'
+        self.checkpoint_prefix = os.path.join(self.checkpoint_dir, 'ckpt')
+        self.checkpoint = tf.train.Checkpoint(
+            step=tf.Variable(0),
+            optimizer=self.opt,
+            agent=self.REINFORCE_agent,
+            actor_network=self.actor_net
+        )
+        self.checkpoint_manager = tf.train.CheckpointManager(self.checkpoint, self.checkpoint_dir, max_to_keep=3)
+        if self.checkpoint_manager.latest_checkpoint:
+            self.checkpoint.restore(self.checkpoint_manager.latest_checkpoint)
+            print("Restored from", self.checkpoint_manager.latest_checkpoint)
+        else:
+            print("Initializing from scratch.")
+        
         #################
         #replay_buffer is used to store policy exploration data
         #################
@@ -205,7 +236,7 @@ class RLOpt():
                                         )
         
         #For policy evaluation
-        test_driver = py_driver.PyDriver(
+        self.test_driver = py_driver.PyDriver(
                                      env = self.eval_env, #PyEnvironment or TFEnvironment class
                                      policy = self.REINFORCE_agent.policy,
                                      observers = [self.test_buffer.add_batch],
@@ -216,7 +247,15 @@ class RLOpt():
 
             # self.parallel_env.close()
             
-    
+    def test_policy(self):
+        self.test_buffer.clear()
+        self.test_driver.run(self.eval_env.reset())  # run the current policy
+        experience = self.test_buffer.gather_all()
+        rl_trajectory = experience.observation.numpy()[0]
+        
+        ga_trajectory = self.gradientOpt()
+        utills.plotTrajectory(rl_trajectory, ga_trajectory, self.step_numGe, self.path)
+        
     ############# - Create the Gradient Ascent Trajectory
     def gradientOpt(self):
         ga_trajectory = [self.x0_reinforce]
@@ -225,16 +264,19 @@ class RLOpt():
         
         for i in range(self.step_numGe):
             with tf.GradientTape() as tape:
-                y = -(2-tf.reduce_sum(tf.math.cos(10*current_x)) + 0.05*tf.reduce_sum(100*current_x**2))+10
+                y = fun.f(current_x) ##-(2-tf.reduce_sum(tf.math.cos(10*current_x)) + 0.05*tf.reduce_sum(100*current_x**2))+10
             gradient = tape.gradient(y, current_x)
             norm_gradient = gradient.numpy()/np.sqrt(np.sum(gradient.numpy()**2))
             current_x.assign(current_x.numpy() + norm_gradient*self.step_size)
             ga_trajectory.append(current_x.numpy())
+        return ga_trajectory
         
         
     def run(self):
         update_num=self.generation_num
         tf.random.set_seed(0)
+        ### for plotting contour import create 2D function 
+        X1, X2, Y=utills.create2Dfunction(x1Lim=(-2, 2), x2Lim=(-1, 3), N=200)
         for n in range(0,update_num):
             print(n)
             #Generate Trajectories
@@ -292,6 +334,13 @@ class RLOpt():
             avg_step_reward = np.mean(batch_rewards[:,0:-1])
             self.REINFORCE_logs.append(best_step_reward)
             
+            if best_step_reward>self.final_reward:
+                #print("final reward before udpate:",final_reward)
+                self.final_reward = best_step_reward
+                final_solution = best_step.numpy()
+                #print("final reward after udpate:",final_reward)
+                #print('updated final_solution=', final_solution)
+                    
             if n%self.eval_intv==0:
                 print("train_step no.=",self.train_step_num)
                 print('best_solution of this generation=', best_step.numpy())
@@ -301,13 +350,73 @@ class RLOpt():
                 #print('act_std:', actions_distribution.stddev()[0,0]  )
                 #print('act_mean:', actions_distribution.mean()[0,0] ) #second action mean
                 print('best_step_index:',best_step_index)
-                print(observations[0])
+                print("observation:", observations[0])
                 print(' ')
+                # Save checkpoint
+                self.checkpoint.step.assign(n)
+                self.checkpoint_manager.save()
+                print("Checkpoint saved at step", int(self.checkpoint.step))
+
             
-            
+            if n%self.plot_intv==0:
+                self.test_buffer.clear()
+                self.test_driver.run(self.eval_env.reset())  #generate batches of trajectories with agent.collect_policy, and save them in replay_buffer
+                experience = self.test_buffer.gather_all()  #get all the stored items in replay_buffer
+                rl_trajectory = experience.observation.numpy()[0]
+                
+                #Plot
+                fig, ax = plt.subplots(figsize=(8,6), constrained_layout=True)
+                # CS = ax.contour(X1, X2, Y)
+                # cp = plt.contour(X1, X2, Y, levels=np.logspace(-1, 3, 20), cmap='jet')
+                cp = plt.contour(X1, X2, Y,levels= -np.logspace(-1, 3, 20)[::-1], cmap=plt.get_cmap('jet_r'))
+                plt.clabel(cp, inline=True, fontsize=8)
+                
+                i = 0
+                plt.arrow(x=rl_trajectory[i][0],
+                y=rl_trajectory[i][1],
+                dx=rl_trajectory[i+1][0]-rl_trajectory[i][0],
+                dy=rl_trajectory[i+1][1]-rl_trajectory[i][1],
+                color='r',linestyle='--',width=0.01, label='REINFORCE-OPT')
+
+                for i in range(0, len(rl_trajectory)-1):   
+                    plt.arrow(x=rl_trajectory[i][0],
+                    y=rl_trajectory[i][1],
+                    dx=rl_trajectory[i+1][0]-rl_trajectory[i][0],
+                    dy=rl_trajectory[i+1][1]-rl_trajectory[i][1],
+                    color='r',linestyle='--',width=0.01)
+                
+                #plt.plot(x_arr,f_vals,linestyle='--',label='$f(x)=(x^2-1)^2+0.3(x-1)^2$')
+                plt.tick_params(size=16)
+                plt.xlabel('x',size=20)
+                plt.ylabel('f(x)',size=20)
+                plt.legend(loc='upper right',fontsize=20)   
+                # plt.xlim([-20, 20])
+                # plt.ylim([-20, 20])
+                plt.plot(1, 1, 'ro')  # global minimum
+                plt.grid(True)
+                plt.colorbar(cp, label="f(x, y)")
+                plt.savefig(self.path+"/trajInt/rl_tr_"+str(n)+".pdf", bbox_inches='tight', dpi=300 )
+                plt.savefig(self.path+"/trajInt/rl_tr_"+str(n)+".png", bbox_inches='tight', dpi=300 )
+                plt.close()
+        
+        print('final_solution=', final_solution, 'final_reward=', self.final_reward)
+        self.REINFORCE_logs = [max(self.REINFORCE_logs[0:i]) for i in range(1, self.generation_num+1)]
+        
+        ############################################# - Second Part of Figure 3
+        ############# - Create a trajectory with REINFORCE_agent.policy (which select action according to the mode of action distribution)
+        # self.test_policy()
+        # self.test_buffer.clear()
+        # self.test_driver.run(self.eval_env.reset())  #generate batches of trajectories with agent.collect_policy, and save them in replay_buffer
+        # experience = self.test_buffer.gather_all()  #get all the stored items in replay_buffer
+        # rl_trajectory = experience.observation.numpy()[0]
+        
+        # ga_trajectory=self.gradientOpt()
+        
+        # utills.plotTrajectory(rl_trajectory, ga_trajectory, self.step_numGe, self.path)
+        
+        
 
 if __name__ =='__main__':
     RL=RLOpt()  
     RL.run()
 
-    

@@ -16,3 +16,10 @@ pip install pygad==3.1.1
 pip3 install -U scikit-learn
 
 pip install pyswarms==3.10.1
+
+
+
+
+pip install tensorflow==2.13.0
+pip install tensorflow-probability==0.20.0
+pip install keras==2.13.1
