@@ -4,3 +4,7 @@ rlEnv
 *.pyc
 /*.pyc
 __pycache__/environmentRL.cpython-310.pyc
+results/**/*.png
+results/**/*.pdf
+
+results/**/*.eps

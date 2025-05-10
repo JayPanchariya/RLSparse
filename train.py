@@ -92,9 +92,11 @@ def extract_episode(traj_batch,epi_length,state_dim=2 ,attr_name = 'observation'
 
     
 class RLOpt():
-    def __init__(self, dirName='rosebourk'):
+    def __init__(self, start=0, end=3000, dirName='rosebourk'):
         ### create a folder for  results and take an 
         self.path = os.path.join("results", dirName)
+        self.start = start
+        self.end = end
         
         try:
             os.makedirs(self.path, exist_ok=True)
@@ -113,22 +115,21 @@ class RLOpt():
         self.train_step_num = 0
         #Set initial x-value
         r = np.random.RandomState(0)
-        self.x0_reinforce = np.array([0.5,-1.0])
-        self.sub_episode_length = 30 #number of time_steps in a sub-episode. 
+        self.x0_reinforce = np.array([0.5,-0.5])
+        self.sub_episode_length = 50 #number of time_steps in a sub-episode. 
         self.episode_length = self.sub_episode_length*6  #an trajectory starts from the initial timestep and has no other initial timesteps
                                             #each trajectory will be split to multiple episodes
-        self.env_num = 7 #Number of parallel environments, each environment is used to generate an episode
+        self.env_num = 40 #Number of parallel environments, each environment is used to generate an episode
         print('x0', self.x0_reinforce)
         
-        self.act_min = -1
-        self.act_max = 1
+        self.act_min = -3#-1
+        self.act_max = 3 #1
         self.step_size = 0.05
         self.step_numGe = 100 # gredient step size
 
         #Set hyper-parameters for REINFORCE-OPT
-        self.generation_num = 3000#number of theta updates for REINFORCE-IP, also serves as the number
+        self.generation_num = self.end #number of theta updates for REINFORCE-IP, also serves as the number
                             #of generations for GA, and the number of iterations for particle swarm optimization
-
         self.disc_factor = 1.0
         self.alpha = 0.2 #regularization coefficient
         self.param_alpha = 0.15 #regularization coefficient for actor_network #tested value: 0.02
@@ -277,7 +278,7 @@ class RLOpt():
         tf.random.set_seed(0)
         ### for plotting contour import create 2D function 
         X1, X2, Y=utills.create2Dfunction(x1Lim=(-2, 2), x2Lim=(-1, 3), N=200)
-        for n in range(0,update_num):
+        for n in np.arange(self.start, self.end, 1):
             print(n)
             #Generate Trajectories
             self.replay_buffer.clear()
