@@ -8,3 +8,12 @@ results/**/*.png
 results/**/*.pdf
 
 results/**/*.eps
+log/
+.DS_Store
+ccRosenbrockFunction-2D.eps
+*.DS_Store
+*.eps
+*.pdf
+results/
+constraints.txt
+.*

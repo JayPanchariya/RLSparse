@@ -18,13 +18,15 @@ seed = 42
 import function2D as fun
 
 r = np.random.RandomState(0)
-tf.random.set_seed(42)
+tf.random.set_seed(42) 
 
-#Define the Environment
+
+#Define the Environment(from original code Line 135-231) 
 class Env(py_environment.PyEnvironment):
     def __init__(self, x0_reinforce, act_min = -1, act_max = 1, step_size=0.05, disc_factor = 1.0, sub_episode_length = 30, N=2):
         '''The function to initialize an Env obj.
         '''
+        print("dddd")
         self.state_dim=N ### number of dim
         self.x0_reinforce = x0_reinforce ## it for intialization 
         self.step_size = step_size
@@ -41,7 +43,8 @@ class Env(py_environment.PyEnvironment):
         
         self._action_spec = array_spec.BoundedArraySpec(
                             shape=(self.state_dim,), dtype=np.int32, minimum=0, maximum=self.act_max-self.act_min, name='action') #a_t is an 2darray
-    
+
+        # print(self._action_spec)
         #Specify the format requirement for observation (It is a 2d-array for this case), 
         #i.e. the observable part of S_t, and it is stored in self._state
         self._observation_spec = array_spec.BoundedArraySpec(
@@ -106,7 +109,9 @@ class Env(py_environment.PyEnvironment):
         ################# --- Compute S_{t+1} 
         #Note that we set the action space as a set of non-negative vectors
         #action-act_max converts the set to the desired set of negative vectors.
+        # print("action:",  action)
         normalized_act = (action-self.act_max)/np.sqrt((action-self.act_max)**2+0.0000001) 
+        print(" normalized_act:",  normalized_act)
         self._state = self._state + normalized_act*self.step_size    
         self._step_counter +=1
         
@@ -129,6 +134,6 @@ class Env(py_environment.PyEnvironment):
             return ts.transition(np.array(self._state, dtype=np.float32), reward=R, discount= self.disc_factor)
         
 
-if __name__ == '__name__':
+if __name__ == '__main__':
     x0_reinforce = np.array([0.5,-1.0])
     EnvTest=Env(x0_reinforce)

@@ -7,7 +7,7 @@ from matplotlib.axes import Axes as ax
 import numpy as np
 import tensorflow as tf
 import function2D as fun
-
+#define and plot functions(in original fn line 52-90)
 def create2Dfunction(x1Lim=(-2.0, 2.0), x2Lim=(-2.0, 2.0), N=200):
     X1 = np.linspace(x1Lim[0],x1Lim[1],N)
     X2 = np.linspace(x2Lim[0],x2Lim[1],N)
@@ -47,12 +47,12 @@ def plotFunction2D(x1Lim=(-2.0, 2.0), x2Lim=(-2.0, 2.0), N=200):
     ax.tick_params(labelsize=20)
     #ax.text(-1.2, -1, 16.6, "$\mathcal{L}(x_1,x_2)=8-\cos(10x_1)-\cos(10x_2)-5x_1^2-5x_2^2$",
     #        color='black', size=20)
-    plt.savefig("results/escape-2D-objective.eps", bbox_inches='tight')
+    plt.savefig("results/escape-2D-objective.pdf", bbox_inches='tight')
     plt.show()
 
 
 
-
+#plotting Trajectories (in original line 504-584)
 def plotTrajectory(rl_trajectory, ga_trajectory,step_num, path):
     
     fig, ax = plt.subplots(figsize=(8,8))
@@ -110,8 +110,8 @@ def plotTrajectory(rl_trajectory, ga_trajectory,step_num, path):
     plt.savefig(path+"/escape-2D-traj1.eps", bbox_inches='tight')
     plt.savefig(path+"/escape-2D-traj1.pdf", bbox_inches='tight')
     plt.savefig(path+"/escape-2D-traj1.png", bbox_inches='tight')
-    plt.show()
-
+    
+    plt.close()
 
 
     ########################################################### - Figure 2b
@@ -142,14 +142,14 @@ def plotTrajectory(rl_trajectory, ga_trajectory,step_num, path):
     plt.savefig(path+"/fitness-traj-2D.pdf", bbox_inches='tight')
     plt.savefig(path+"/fitness-traj-2D.png", bbox_inches='tight')
     
-    plt.show()
+    plt.close()
 
 
 
 
 if __name__ =='__main__':
     x = np.array([1,2])
-    # plotFunction2D()
+    plotFunction2D()
     
     x = np.linspace(-2, 2, 400)
     y = np.linspace(-1, 3, 400)
@@ -158,7 +158,7 @@ if __name__ =='__main__':
     # Evaluate function over grid
     Z = fun.f([X, Y])
 
-    # Plot
+    # Plot contour of given function
     plt.figure(figsize=(8, 6))
     cp = plt.contour(X, Y, Z,levels= -np.logspace(-1, 3, 20)[::-1], cmap=plt.get_cmap('jet_r'))
     plt.clabel(cp, inline=True, fontsize=8)
@@ -168,6 +168,9 @@ if __name__ =='__main__':
     plt.plot(1, 1, 'ro')  # global minimum
     plt.grid(True)
     plt.colorbar(cp, label="f(x, y)")
+    plt.savefig("ccRosenbrockFunction-2D.eps", bbox_inches='tight')
+    plt.savefig("ccRosenbrockFunction-2D.pdf", bbox_inches='tight')
+    plt.savefig("ccRosenbrockFunction-2D.png", bbox_inches='tight')
     plt.show()
 
     # a=fun.f(x)

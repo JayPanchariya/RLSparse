@@ -1,25 +1,33 @@
-python3.10 -m venv myEnv
-pip install tensorflow==2.15.0
-pip install dm-reverb==0.9.0
-pip install tf-agents==0.19.0
+# python3.10 -m venv myEnv
+# pip install tensorflow==2.15.0
+# pip install dm-reverb==0.9.0
+# pip install tf-agents==0.19.0
 
 
 
-pip install tensorflow==2.15.0
-pip install dm-reverb==0.14.0
-pip install tf-agents==0.19.0
+# pip install tensorflow==2.15.0
+# pip install dm-reverb==0.14.0
+# pip install tf-agents==0.19.0
 
-pip install numpy 
+# pip install numpy 
 
-pip install pygad==3.1.1
+# pip install pygad==3.1.1
 
-pip3 install -U scikit-learn
+# pip3 install -U scikit-learn
 
-pip install pyswarms==3.10.1
-
-
+# pip install pyswarms==3.10.1
 
 
-pip install tensorflow==2.13.0
-pip install tensorflow-probability==0.20.0
-pip install keras==2.13.1
+
+
+# pip install tensorflow==2.13.0
+# pip install tensorflow-probability==0.20.0
+# pip install keras==2.13.1
+
+tensorflow==2.15.0
+# dm-reverb==0.9.0
+tf-agents==0.19.0
+numpy
+scikit-learn
+pygad
+pyswarms
