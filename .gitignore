@@ -9,6 +9,7 @@ results/**/*.pdf
 
 results/**/*.eps
 log/
+log1/
 .DS_Store
 ccRosenbrockFunction-2D.eps
 *.DS_Store
@@ -17,3 +18,22 @@ ccRosenbrockFunction-2D.eps
 results/
 constraints.txt
 .*
+__pycache__/environmentRL.cpython-310.pyc
+__pycache__/function2D.cpython-310.pyc
+__pycache__/environmentRL.cpython-310.pyc
+__pycache__/environmentRL.cpython-310.pyc
+try.ipynb
+try1.ipynb
+__pycache__/environmentRL.cpython-310.pyc
+__pycache__/function2D.cpython-310.pyc
+__pycache__/environmentRL.cpython-310.pyc
+report.log.1
+report.log.2
+linetoline.ipynb
+try1.ipynb
+try.ipynb
+.DS_Store
+__pycache__/function2D.cpython-310.pyc
+__pycache__/function2D.cpython-310.pyc
+try.ipynb
+try1.ipynb
