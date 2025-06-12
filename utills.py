@@ -101,7 +101,7 @@ def plotTrajectory(rl_trajectory, ga_trajectory,step_num, path):
                 color='b',linestyle='--',width=0.006)
 
     plt.plot(0,0,marker='o',color='black',markersize=12) 
-    plt.text(1, 1, s='Global Max',size=20)
+    plt.text(0, 0, s='Global Max',size=20)
     plt.tick_params(size=8)
     plt.xlabel('$x_1$',size=25)
     plt.ylabel('$x_2$',size=25)
@@ -148,19 +148,23 @@ def plotTrajectory(rl_trajectory, ga_trajectory,step_num, path):
 
 
 if __name__ =='__main__':
-    x = np.array([1,2])
-    plotFunction2D()
+    # x = np.array([1,2])
+    # plotFunction2D(x1Lim=(-1.0, 1.0), x2Lim=(-1.0, 1.0))
     
-    x = np.linspace(-2, 2, 400)
-    y = np.linspace(-1, 3, 400)
-    X, Y = np.meshgrid(x, y)
+    # x = np.linspace(-1, 1, 400)
+    # y = np.linspace(-1, 1, 400)
+    # X, Y = np.meshgrid(x, y)
 
-    # Evaluate function over grid
-    Z = fun.f([X, Y])
-
+    # # Evaluate fun
+    # # ction over grid
+    # print(np.hstack((X, Y)))
+    # Z = fun.f(np.hstack((X, Y)))
+    # print(np.stack([X, Y]))
+    X, Y,Z=create2Dfunction(x1Lim=(-1.0, 1.0), x2Lim=(-1.0, 1.0), N=200)
     # Plot contour of given function
     plt.figure(figsize=(8, 6))
-    cp = plt.contour(X, Y, Z,levels= -np.logspace(-1, 3, 20)[::-1], cmap=plt.get_cmap('jet_r'))
+    # cp = plt.contour(X, Y, Z,levels= -np.logspace(-1, 3, 20)[::-1], cmap=plt.get_cmap('jet_r'))
+    cp = plt.contour(X, Y, Z)
     plt.clabel(cp, inline=True, fontsize=8)
     plt.title("Contour Plot of Rosenbrock Function")
     plt.xlabel("x")
@@ -175,3 +179,39 @@ if __name__ =='__main__':
 
     # a=fun.f(x)
     # print(a)
+    
+        ############### -- The objective function. In Figure 3a, f(x) is denoted as \mathcal{L}(x).
+  
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+    # ######################### - Plot the Objective Function in Figure 3
+    # x1_min = -1.0
+    # x2_min = -1.0
+    # x1_max = 1.0
+    # x2_max = 1.0
+    # x_num = 100
+
+    # X1 = np.linspace(x1_min,x1_max,x_num)
+    # X2 = np.linspace(x2_min,x2_max,x_num)
+    # X1, X2 = np.meshgrid(X1, X2)
+    # Y = np.zeros((x_num,x_num))
+    # for i in range(x_num):
+    #     for j in range(x_num):
+    #         Y[i,j] = f( x=np.array([X1[i,j],X2[i,j]]) )
+
+    # ax = plt.figure(figsize=(8,8)).add_subplot(projection='3d')
+    # plt.rcParams['text.usetex'] = True
+    # plt.rcParams['mathtext.fontset'] = 'custom'
+    # plt.rcParams['mathtext.bf'] = 'STIXGeneral:italic:bold'
+    # plt.rcParams['mathtext.it'] = 'STIXGeneral:italic'
+    # # Plot the 3D surface
+    # #ax.title.set_text(r"$f(x)=-ln((x-m_1)^2+0.00001)-ln((x-m_2)^2+0.01)$")
+    # ax.plot_surface(X1, X2, Y, cmap=cm.coolwarm, edgecolor='royalblue')
+    # ax.set(xlim=(x1_min, x1_max), ylim=(x2_min, x2_max), zlim=(np.min(Y), np.max(Y)-1.5))
+    # ax.set_xlabel('$x_1$', fontsize=25)
+    # ax.set_ylabel('$x_2$', fontsize=25)
+    # ax.tick_params(labelsize=20)
+    # #ax.text(-1.2, -1, 16.6, "$\mathcal{L}(x_1,x_2)=8-\cos(10x_1)-\cos(10x_2)-5x_1^2-5x_2^2$",
+    # #        color='black', size=20)
+    # plt.show()
+    # plt.savefig("escape-2D-objective2d.png", bbox_inches='tight', transparent=True)
+    # # plt.show()

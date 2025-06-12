@@ -17,13 +17,13 @@ seed = 42
 
 import function2D as fun
 
-r = np.random.RandomState(0)
-tf.random.set_seed(42) 
+# r = np.random.RandomState(0)
+# tf.random.set_seed(42) 
 
 
 #Define the Environment(from original code Line 135-231) 
 class Env(py_environment.PyEnvironment):
-    def __init__(self, x0_reinforce, act_min = -1, act_max = 1, step_size=0.05, disc_factor = 1.0, sub_episode_length = 30, N=2):
+    def __init__(self, x0_reinforce=np.array([0.5,-1.0]), act_min = -1, act_max = 1, step_size=0.05, disc_factor = 1.0, sub_episode_length = 30, N=2):
         '''The function to initialize an Env obj.
         '''
         print("dddd")
@@ -111,7 +111,7 @@ class Env(py_environment.PyEnvironment):
         #action-act_max converts the set to the desired set of negative vectors.
         # print("action:",  action)
         normalized_act = (action-self.act_max)/np.sqrt((action-self.act_max)**2+0.0000001) 
-        print(" normalized_act:",  normalized_act)
+        # print(" normalized_act:",  normalized_act)
         self._state = self._state + normalized_act*self.step_size    
         self._step_counter +=1
         

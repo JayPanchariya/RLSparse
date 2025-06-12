@@ -7,8 +7,8 @@ import tensorflow as tf
 #     sigma = np.std(y)
 #     return (y-mue)/sigma**2
 
-# def f(x):
-#     return -(2-np.sum(np.cos(10*x)) + 0.05*np.sum(100*x**2))+10
+def f(x):
+    return -(2-np.sum(np.cos(10*x)) + 0.05*np.sum(100*x**2))+10
 
 # def f(x):
 #     x1 = x[0]
@@ -19,12 +19,12 @@ import tensorflow as tf
 # def f(x):
 #     x1 = x[0]
 #     x2 = x[1]
-#     return -(np.sinc((x1)**2)+ np.sinc(x2-1))
+#     return -(np.sinc((x1)**2)+ np.sinc(x2-1))- 0.1* (x1**2 + (x2 - 1)**2)
 
-def f(x):
-    x1 = x[0]
-    x2 = x[1]
-    return -(abs(x1-1) + 2*abs(x2-2))
+# def f(x):
+#     x1 = x[0]
+#     x2 = x[1]
+#     return -(abs(x1-1) + 2*abs(x2-2))
 # def f(x):
 #     """
 #     Lagrangian function:
